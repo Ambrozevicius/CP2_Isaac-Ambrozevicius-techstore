@@ -1,7 +1,31 @@
 // Página usada pelo time de estoque para acompanhar a quantidade de cada produto
-export default function Estoque({ produtos }) {
+export default function Estoque({ produtos, listaEspera = [] }) {
   // slice cria uma cópia, para o sort não alterar a lista original
   const ordenados = produtos.slice().sort((a, b) => a.estoque - b.estoque)
+
+  const aguardandoPorProduto = listaEspera.reduce((acumulador, pedido) => {
+    const chave = pedido.idProduto
+
+    if (!acumulador[chave]) {
+      const produto = produtos.find((item) => item.id === chave)
+      acumulador[chave] = {
+        idProduto: chave,
+        nomeProduto: produto?.title || pedido.tituloProduto,
+        clientes: [],
+      }
+    }
+
+    acumulador[chave].clientes.push({
+      nome: pedido.nomeCliente,
+      email: pedido.emailCliente,
+    })
+
+    return acumulador
+  }, {})
+
+  const listaDeEspera = Object.values(aguardandoPorProduto).sort(
+    (a, b) => b.clientes.length - a.clientes.length
+  )
 
   return (
     <section>
@@ -37,6 +61,31 @@ export default function Estoque({ produtos }) {
           </tbody>
         </table>
       </div>
+
+      <h2>Lista de espera</h2>
+      {listaDeEspera.length === 0 ? (
+        <p className="aviso">Nenhum cliente aguardando retorno de produto.</p>
+      ) : (
+        <div className="grade">
+          {listaDeEspera.map((produto) => (
+            <article key={produto.idProduto} className="card">
+              <h3 className="card-titulo">{produto.nomeProduto}</h3>
+              <p className="detalhe-estoque">
+                {produto.clientes.length} {produto.clientes.length === 1 ? 'cliente aguardando' : 'clientes aguardando'}
+              </p>
+              <ul>
+                {produto.clientes.map((cliente, index) => (
+                  <li key={`${produto.idProduto}-${cliente.email}-${index}`}>
+                    <strong>{cliente.nome}</strong>
+                    <br />
+                    {cliente.email}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

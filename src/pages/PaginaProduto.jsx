@@ -1,6 +1,13 @@
 import { Link, useParams } from 'react-router'
+import ProdutoCard from '../components/ProdutoCard'
+import { formatarPreco } from '../utils/formatarPreco'
 
-export default function PaginaProduto({ produtos, onAdicionar }) {
+export default function PaginaProduto({
+  produtos,
+  onAdicionar,
+  onSolicitarAviso,
+  mensagensAviso,
+}) {
   const { id } = useParams()
   const produto = produtos.find((item) => item.id === id)
 
@@ -15,8 +22,22 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
     )
   }
 
+  const esgotado = Number(produto.estoque) === 0
+  const precoValido =
+    produto.price !== undefined &&
+    produto.price !== null &&
+    produto.price !== '' &&
+    Number.isFinite(Number(produto.price))
+  const precoOriginalValido =
+    produto.precoOriginal !== undefined &&
+    produto.precoOriginal !== null &&
+    produto.precoOriginal !== '' &&
+    Number.isFinite(Number(produto.precoOriginal))
   const relacionados = produtos
-    .filter((item) => item.category === produto.category && item.id !== produto.id)
+    .filter(
+      (item) =>
+        item.category === produto.category && item.id !== produto.id && Number(item.estoque) > 0
+    )
     .slice(0, 4)
 
   return (
@@ -37,17 +58,39 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
           <p className="card-avaliacao">
             ★ {produto.rating.rate} <span>({produto.rating.count} avaliações)</span>
           </p>
-          <p className="detalhe-preco">R$ {produto.price.toFixed(2).replace('.', ',')}</p>
+
+          {precoOriginalValido && (
+            <p className="preco-original">{formatarPreco(produto.precoOriginal)}</p>
+          )}
+
+          <p className="detalhe-preco">
+            {precoValido ? formatarPreco(produto.price) : 'Preço indisponível'}
+          </p>
           <p className="detalhe-descricao">{produto.description}</p>
-          <p className="detalhe-estoque">{produto.estoque} unidades disponíveis</p>
+          <p className="detalhe-estoque">
+            {esgotado ? 'Esgotado' : `${produto.estoque} unidades disponíveis`}
+          </p>
 
           <button
             className="botao botao-grande"
             onClick={() => onAdicionar(produto)}
-            disabled={produto.estoque === 0}
+            disabled={esgotado || !precoValido}
           >
-            Adicionar ao carrinho
+            {esgotado ? 'Esgotado' : precoValido ? 'Adicionar ao carrinho' : 'Preço indisponível'}
           </button>
+
+          {esgotado && (
+            <button
+              className="botao botao-secundario"
+              onClick={() => onSolicitarAviso?.(produto)}
+            >
+              Avise-me quando voltar
+            </button>
+          )}
+
+          {mensagensAviso?.[produto.id] && (
+            <p className="mensagem-cupom">{mensagensAviso[produto.id]}</p>
+          )}
 
           <ul className="detalhe-garantias">
             <li>Troca grátis em até 30 dias</li>
@@ -59,18 +102,7 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
       <h2>Produtos relacionados</h2>
       <div className="grade">
         {relacionados.map((item) => (
-          <article key={item.id} className="card">
-            <Link to={`/produto/${item.id}`} className="card-link">
-              <div className="card-imagem-moldura">
-                <img src={item.image} alt={item.title} className="card-imagem" />
-              </div>
-              <h3 className="card-titulo">{item.title}</h3>
-            </Link>
-            <p className="preco">R$ {Number(item.price).toFixed(2).replace('.', ',')}</p>
-            <button className="botao" onClick={() => onAdicionar(item)}>
-              Adicionar ao carrinho
-            </button>
-          </article>
+          <ProdutoCard key={item.id} produto={item} onAdicionar={onAdicionar} />
         ))}
       </div>
     </section>

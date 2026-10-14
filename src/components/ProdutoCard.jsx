@@ -2,7 +2,31 @@ import { Link } from 'react-router'
 import { formatarPreco } from '../utils/formatarPreco'
 
 export default function ProdutoCard({ produto, onAdicionar }) {
-  const esgotado = produto.estoque === 0
+  const esgotado = Number(produto.estoque) === 0
+  const precoValido =
+    produto.price !== undefined &&
+    produto.price !== null &&
+    produto.price !== '' &&
+    Number.isFinite(Number(produto.price))
+  const precoNumero = precoValido ? Number(produto.price) : null
+  const freteGratis = precoValido && precoNumero > 100
+  const precoOriginalValido =
+    produto.precoOriginal !== undefined &&
+    produto.precoOriginal !== null &&
+    produto.precoOriginal !== '' &&
+    Number.isFinite(Number(produto.precoOriginal))
+  const desabilitado = esgotado || !precoValido
+
+  function handleAdicionar(evento) {
+    evento.preventDefault()
+    evento.stopPropagation()
+
+    if (!onAdicionar || desabilitado) {
+      return
+    }
+
+    onAdicionar(produto)
+  }
 
   return (
     <article className="card">
@@ -18,19 +42,19 @@ export default function ProdutoCard({ produto, onAdicionar }) {
       </p>
 
       <div className="card-precos">
-        {produto.precoOriginal && (
+        {precoOriginalValido && (
           <span className="preco-original">{formatarPreco(produto.precoOriginal)}</span>
         )}
-        <span className="preco">{formatarPreco(produto.price)}</span>
+        <span className="preco">{precoValido ? formatarPreco(precoNumero) : 'Preço indisponível'}</span>
       </div>
 
       <div className="card-selos">
-        {produto.price > 100 && <span className="selo selo-frete">Frete grátis</span>}
+        {freteGratis && <span className="selo selo-frete">Frete grátis</span>}
         {esgotado && <span className="selo selo-esgotado">Esgotado</span>}
       </div>
 
-      <button className="botao" onClick={() => onAdicionar(produto)} disabled={esgotado}>
-        Adicionar ao carrinho
+      <button className="botao" onClick={handleAdicionar} disabled={desabilitado}>
+        {esgotado ? 'Esgotado' : precoValido ? 'Adicionar ao carrinho' : 'Indisponível'}
       </button>
     </article>
   )
